@@ -32,6 +32,8 @@ def run():
     else:
         selected_tasks = [task for task in TASKS_NATURAL if task["task"] == args.task_category]
         
+    selected_tasks = selected_tasks[args.start_idx:args.end_idx]
+    
     # Load checkpoint if it exists
     completed_tasks = {}
     
@@ -211,6 +213,18 @@ if __name__ == "__main__":
         "--max_user_turns",
         type=int,
         default=10
+    )
+    parser.add_argument(
+        "--start_idx",
+        type=int,
+        default=0,
+        help="Start index of tasks to run."
+    )
+    parser.add_argument(
+        "--end_idx",
+        type=int,
+        default=None,
+        help="End index of tasks to run (exclusive)."
     )
     parser.add_argument(
         "--interactive",
