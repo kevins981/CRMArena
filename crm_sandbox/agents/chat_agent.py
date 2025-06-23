@@ -100,9 +100,9 @@ class ChatAgent:
     def act(self, env, index=None, temperature=0.0):
         query, metadata = env.reset(task_index=index)
         self.reset({"query": query, "metadata": metadata})
-        # print("----")
-        # print(self.sys_prompt)
-        # print("----")
+        print("----")
+        print(self.sys_prompt)
+        print("----")
         total_cost = 0.0
         self.info["observation_sizes"] = []
         done = False
@@ -117,20 +117,20 @@ class ChatAgent:
             info = {}
             current_agent_turn += 1
             # turn off thinking for gemini 2.5 flash
-            if self.original_model_name == "gemini-2.5-flash-preview-04-17":
-                thinking = {"type": "disabled", "budget_tokens": 0}
-            elif self.original_model_name == "gemini-2.5-flash-preview-04-17-thinking-4096":
-                thinking = {"type": "enabled", "budget_tokens": 4096}
-            else:
-                thinking = None
-            
+            # if self.original_model_name == "gemini-2.5-flash-preview-04-17":
+            #     thinking = {"type": "disabled", "budget_tokens": 0}
+            # elif self.original_model_name == "gemini-2.5-flash-preview-04-17-thinking-4096":
+            #     thinking = {"type": "enabled", "budget_tokens": 4096}
+            # else:
+            #     thinking = None
+            print("[DEBUG] agent input :", self.messages)
             res = completion(
                 messages=self.messages,
                 model=self.model,
                 temperature=0.0,
                 max_tokens=2000 if self.original_model_name not in ["o1-mini", "o1-preview", "o1-2024-12-17", "deepseek-r1", "o3-mini-2025-01-31", "gemini-2.5-flash-preview-04-17", "gemini-2.5-flash-preview-04-17-thinking-4096", "gemini-2.5-pro-preview-03-25"] else 50000,
                 top_p=1.0 if self.model not in ["o3-mini-2025-01-31"] else None,
-                thinking= thinking,  
+                # thinking=thinking,  
                 # custom_llm_provider=self.provider,
                 additional_drop_params=["temperature"] if self.original_model_name in ["o1-mini", "o1-preview", "o1-2024-12-17", "deepseek-r1", "o3-mini-2025-01-31"] else []
             )
@@ -138,6 +138,7 @@ class ChatAgent:
             
             
             message = res.choices[0].message.model_dump()
+            print("[DEBUG] agent output :", message)
             
             
             usage = res.usage

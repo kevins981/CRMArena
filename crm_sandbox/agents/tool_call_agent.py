@@ -35,6 +35,7 @@ class ToolCallAgent:
     ):
         schema = self._build_schema(schema_obj)
         self.tools = tools
+        print("[DEBUG] tool call agent tools", tools)
         
         if strategy == "tool_call":
             if "llama" in model: # llama tool_calling through prompt
@@ -56,8 +57,8 @@ class ToolCallAgent:
             self.model = TOGETHER_MODELS_MAP[self.model]["name"]
         elif "vertex" in provider and self.model in VERTEX_MODELS_MAP:
             self.model = VERTEX_MODELS_MAP[self.model]["name"]
-        else:
-            assert self.model in ["o1-mini", "o1-2024-12-17", "o1-preview", "gpt-4o-2024-08-06", "gpt-3.5-turbo-0125"], "Invalid model name"
+        #else:
+            #assert self.model in ["o1-mini", "o1-2024-12-17", "o1-preview", "gpt-4o-2024-08-06", "gpt-3.5-turbo-0125"], "Invalid model name"
             
 
     def _build_schema(self, schema_obj):
@@ -97,6 +98,7 @@ class ToolCallAgent:
         for turn_id in range(self.max_turns):
             time.sleep(3)
             info = {}
+            print("[DEBUG] tool call agent input :", self.messages)
             res = chat_completion_request(
                 messages=self.messages,
                 model=self.model,
@@ -107,6 +109,7 @@ class ToolCallAgent:
                 additional_drop_params=["temperature"] if self.model in ["o1-mini", "o1-preview", "o1-2024-12-17"] else []
             )
             message = res.choices[0].message.model_dump()
+            print("[DEBUG] tool call agent output :", message)
             usage = res.usage
             
             for key in self.usage.keys():
