@@ -1,4 +1,4 @@
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 
 def _clean_fields_in_schemas(schema_list_of_dicts):
     """
@@ -13,12 +13,12 @@ def _clean_fields_in_schemas(schema_list_of_dicts):
             }
 
 ## CRMArena
-crmarena = load_dataset("Salesforce/CRMArena", "CRMArena")
-    
-TASKS_ORIGINAL = [data for data in crmarena["test"]]
-    
-schema = load_dataset("Salesforce/CRMArena", "schema")
+# Load custom dataset from local disk
+custom_dataset = load_from_disk("sub_taskset_50qs")
+TASKS_ORIGINAL = [data for data in custom_dataset]
+print("[DEBUG] All tasks: ", TASKS_ORIGINAL)    
 
+schema = load_dataset("Salesforce/CRMArena", "schema")
 SCHEMA_ORIGINAL = [data for data in schema["test"]]    
 
 _clean_fields_in_schemas(SCHEMA_ORIGINAL)
