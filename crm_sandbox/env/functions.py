@@ -345,7 +345,7 @@ def get_qualified_agent_ids_by_case_count(agent_handled_cases, n_cases, sf_conne
             return "Error: n_cases must be an integer"
 
         # Filter agent IDs based on case count
-        qualified_agents = [agent_id for agent_id, count in agent_handled_cases.items() if count > n_cases]
+        qualified_agents = [agent_id for agent_id, count in agent_handled_cases.items() if count >= n_cases]
 
         return qualified_agents
 
