@@ -44,17 +44,17 @@ def task_1050():
     state_with_quickest_closure = find_id_with_min_value(region_closure_times, sf_connector=sf_connector)
     print(f"State with quickest case closures: {state_with_quickest_closure}")
 
-def task_1041():
-    #During the summer of 2021, which states had the quickest case closures? Return only the two-letter abbreviation of the most matching state (eg. CA).
+def task_1115():
+    # Which states resolved cases the quickest in Winter 2021? Return only the two-letter abbreviation of the most matching state (eg. CA).
     sf_connector = SalesforceConnector(org_type="original")
 
-    result = get_period("Summer", 2021) 
-    print(f"Summer 2021 is: {result}")
+    result = get_period("Winter", 2021) 
+    print(f"Winter 2021 is: {result}")
 
     start_date = result['start_date']
     end_date = result['end_date']
     cases = get_cases(start_date=start_date, end_date=end_date, statuses=["Closed"], sf_connector=sf_connector)
-    print(f"Cases in the past 5 months: {cases}")
+    print(f"Cases: {cases}")
     
     # Add shipping state information to the cases
     cases_with_state = get_shipping_state(cases, sf_connector=sf_connector)
@@ -71,6 +71,7 @@ def task_1041():
 
 def task_165():    
     # Is there a specific month in the past 6 quarters where the cases for Hydro Racer Swim Fins significantly surpassed those of other months? The associated product Id is 01tWs000002wT5JIAU.
+    # Today's date: 2022-01-06
     sf_connector = SalesforceConnector(org_type="original")
 
     # Get the order item IDs for the product
@@ -80,7 +81,7 @@ def task_165():
 
     # Get the start date
     # Call get_start_date to find the date two weeks before 2020-04-26
-    end_date = "2023-01-05T00:00:00Z"
+    end_date = "2022-01-06T00:00:00Z"
     period = "quarter"
     interval_count = 6
     
@@ -91,6 +92,11 @@ def task_165():
     # Call get_cases with start_date, end_date, and the non_transferred case IDs
     cases = get_cases(start_date=start_date, end_date=end_date, order_item_ids=order_item_ids, sf_connector=sf_connector)
     pprint(cases)
+
+    month_to_case_count = get_month_to_case_count(cases, sf_connector=sf_connector)
+    pprint(f"Month to case count: {month_to_case_count}")
+
+    month_with_max_case_count = find_id_with_max_value(month_to_case_count, sf_connector=sf_connector)
 
 def task_130():    
     # Is there a specific month in the past three quarters when the All-Around Yoga Tank cases we received were significantly higher than in other months? The associated product Id is 01tWs000002wQXGIA2. 
@@ -163,26 +169,28 @@ def task_742():
     agent_with_max_handle_time = find_id_with_max_value(average_handle_times, sf_connector=sf_connector)
     print(f"Agent with highest average handle time: {agent_with_max_handle_time}")
 
-def task_696():    
-    # Over the past 2 weeks, identify the agent with the shortest handle time who has managed more than one case. Today is 2020-04-26
+def task_721():    
+    # Which agent had the longest average handle time for those managing more than 1 case during the last two quarters? Today's date: 2022-04-17
     sf_connector = SalesforceConnector(org_type="original")
 
     # Get the start date
     # Call get_start_date to find the date two weeks before 2020-04-26
-    end_date = "2020-04-26T00:00:00Z"
-    period = "week"
+    end_date = "2022-04-17T00:00:00Z"
+    period = "quarter"
     interval_count = 2
     
     result = get_start_date(end_date, period, interval_count)
-    print(f"Two weeks before {end_date} is: {result}")
+    print(f"Two quarters before {end_date} is: {result}")
+
+    start_date = result
     
     # Call get_non_transferred_case_ids with the calculated start date and end date
-    start_date = result
     non_transferred_cases = get_non_transferred_case_ids(start_date, end_date, sf_connector=sf_connector)
     print(f"Non-transferred case IDs between {start_date} and {end_date}: {non_transferred_cases}")
     
     # Call get_cases with start_date, end_date, and the non_transferred case IDs
     cases = get_cases(start_date=start_date, end_date=end_date, statuses=["Closed"], case_ids=non_transferred_cases, sf_connector=sf_connector)
+
     pprint(cases)
     
     # Call calculate_average_handle_time on the retrieved cases
@@ -191,7 +199,7 @@ def task_696():
     
     # Find the agent with the highest average handle time
     agent_with_max_handle_time = find_id_with_max_value(average_handle_times, sf_connector=sf_connector)
-    print(f"Agent with highest average handle time: {agent_with_max_handle_time}")
+    print(f"Agent with longest average handle time: {agent_with_max_handle_time}")
 
 def task_652():   
     # # In the past 3 months, which agent achieved the lowest average handle time while handling more than 2 cases? Return only the Id of the agent. Today's date: 2022-08-22
@@ -325,31 +333,31 @@ def task_859():
     transferred_cases = get_agent_transferred_cases_by_period(start_date, end_date, qualified_agent_ids, sf_connector=sf_connector)
     pprint(f"Transferred cases for qualified agents: {transferred_cases}")
 
-def task_781():    
-    # Identify the agent with the highest number of transfers over the last 5 quarters among those who managed cases.
-    # Today's date: 2024-07-27
+def task_804():    
+    # In the past four months, which agent averaged the highest number of transfers among those handling more than three cases
+    # Today's date: 2020-07-15
     sf_connector = SalesforceConnector(org_type="original")
 
     # Get the start date
     # Call get_start_date to find the date two weeks before 2020-04-26
-    end_date = "2024-07-27T00:00:00Z"
-    period = "quarter"
-    interval_count = 5
+    end_date = "2020-07-15T00:00:00Z"
+    period = "month"
+    interval_count = 4
     
     result = get_start_date(end_date, period, interval_count)
-    print(f"Five quarters before {end_date} is: {result}")
+    print(f"Four months before {end_date} is: {result}")
     
     # Call get_non_transferred_case_ids with the calculated start date and end date
     start_date = result
 
     # Call get_cases with start_date, end_date
-    cases = get_cases(start_date=start_date, end_date=end_date, statuses=["Closed"], sf_connector=sf_connector)
-    pprint(f"cases within period: {cases}")
+    # cases = get_cases(start_date=start_date, end_date=end_date, statuses=["Closed"], sf_connector=sf_connector)
+    # pprint(f"cases within period: {cases}")
 
     agent_handled_cases = get_agent_handled_cases_by_period(start_date, end_date, sf_connector=sf_connector)
     pprint(f"Agent handled cases: {agent_handled_cases}")
 
-    qualified_agent_ids = get_qualified_agent_ids_by_case_count(agent_handled_cases, 1, sf_connector=sf_connector)
+    qualified_agent_ids = get_qualified_agent_ids_by_case_count(agent_handled_cases, 4, sf_connector=sf_connector)
     pprint(f"Qualified agent IDs: {qualified_agent_ids}")
 
     transferred_cases = get_agent_transferred_cases_by_period(start_date, end_date, qualified_agent_ids, sf_connector=sf_connector)
@@ -400,11 +408,12 @@ def task_327():
 
 if __name__ == "__main__":
     # task_742()
-    # task_696()
+    # task_721()
     # task_780()
-    # task_781()
+    task_804()
     # task_327()
-    task_1050()
+    # task_1050()
+    # task_1115()
     # task_130()
     # task_132()
     # task_165()
