@@ -116,7 +116,8 @@ def run():
                 eval_mode=args.agent_eval_mode,
                 max_turns=args.max_turns,
                 strategy=args.agent_strategy,
-                provider=args.llm_provider
+                provider=args.llm_provider,
+                token_limit=args.token_limit
             )
         print(f"Running task {idx}")
         try:
@@ -247,6 +248,12 @@ if __name__ == "__main__":
         type=lambda x: {'true': True, 'false': False}[x.lower()],
         default=False,
         help="Whether to use a privacy-aware prompt. Accepts 'true' or 'false'. (default: %(default)s)"
+    )
+    parser.add_argument(
+        "--token_limit",
+        type=int,
+        default=20000,
+        help="Maximum number of tokens allowed in conversation context (default: %(default)s)"
     )
     parser.add_argument("--log_dir", type=str, default="logs")
     args = parser.parse_args()

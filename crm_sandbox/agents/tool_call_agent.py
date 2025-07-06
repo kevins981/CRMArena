@@ -32,7 +32,7 @@ def chat_completion_request(
     
 class ToolCallAgent:
     def __init__(
-        self, tools, schema_obj, model: str = "gpt-4o", max_turns: int = 20, eval_mode="default", strategy="tool_call", provider="bedrock"
+        self, tools, schema_obj, model: str = "gpt-4o", max_turns: int = 20, eval_mode="default", strategy="tool_call", provider="bedrock", token_limit: int = 20000
     ):
         schema = self._build_schema(schema_obj)
         self.tools = tools
@@ -49,6 +49,7 @@ class ToolCallAgent:
         self.model = model
         self.eval_mode = eval_mode
         self.max_turns = max_turns
+        self.token_limit = token_limit
         self.usage = {"cost": [], "completion_tokens": [], "prompt_tokens": [], "total_tokens": []}
         self.provider = provider
         if provider == "bedrock" and self.model in BEDROCK_MODELS_MAP:
@@ -186,19 +187,18 @@ class ToolCallAgent:
         self.info["observation_sizes"] = []
         done = False
         reward = 0
-        token_limit = 5000
         
         for turn_id in range(self.max_turns):
             time.sleep(3)
             # Check total token count in the conversation so far
             total_tokens_so_far = self._count_tokens_in_messages(self.messages, self.model, self.tools)
             print(f"[DEBUG] Total tokens so far: {total_tokens_so_far}")
-            # If the conversation context exceeds 10k tokens, end the run early
-            if total_tokens_so_far > token_limit:
+            # If the conversation context exceeds token limit, end the run early
+            if total_tokens_so_far > self.token_limit:
                 self.info["end_reason"] = {
                     "source": "agent",
                     "message": "Max tokens exceeded",
-                    "content": f"Current token count: {total_tokens_so_far} > {token_limit}"
+                    "content": f"Current token count: {total_tokens_so_far} > {self.token_limit}"
                 }
                 done = True
                 break
