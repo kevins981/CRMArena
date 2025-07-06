@@ -2,6 +2,7 @@ import json, os
 from litellm import completion, completion_cost
 from typing import Dict, List, Any
 import re, traceback, ast, time
+import tiktoken
 from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 from crm_sandbox.agents.prompts import SCHEMA_STRING, SYSTEM_METADATA, NATIVE_FC_PROMPT, CUSTOM_FC_PROMPT, FC_RULE_STRING, FC_FLEX_PROMPT
@@ -74,6 +75,97 @@ class ToolCallAgent:
         )
         return template
     
+    def _count_tokens_in_tools(self, model="gpt-4o", functions=None):
+        if functions is None:
+            return 0
+        encoding = tiktoken.get_encoding("o200k_base")
+# Set function settings for the above models
+        func_init = 7
+        prop_init = 3
+        prop_key = 3
+        enum_init = -3
+        enum_item = 3
+        func_end = 12
+
+        func_token_count = 0
+        if len(functions) > 0:
+            for f in functions:
+                func_token_count += func_init  # Add tokens for start of each function
+                function = f["function"]
+                f_name = function["name"]
+                f_desc = function["description"]
+                if f_desc.endswith("."):
+                    f_desc = f_desc[:-1]
+                line = f_name + ":" + f_desc
+                func_token_count += len(encoding.encode(line))  # Add tokens for set name and description
+                if len(function["parameters"]["properties"]) > 0:
+                    func_token_count += prop_init  # Add tokens for start of each property
+                    for key in list(function["parameters"]["properties"].keys()):
+                        func_token_count += prop_key  # Add tokens for each set property
+                        p_name = key
+                        p_type = function["parameters"]["properties"][key]["type"]
+                        p_desc = function["parameters"]["properties"][key]["description"]
+                        if "enum" in function["parameters"]["properties"][key].keys():
+                            func_token_count += enum_init  # Add tokens if property has enum list
+                            for item in function["parameters"]["properties"][key]["enum"]:
+                                func_token_count += enum_item
+                                func_token_count += len(encoding.encode(item))
+                        if p_desc.endswith("."):
+                            p_desc = p_desc[:-1]
+                        line = f"{p_name}:{p_type}:{p_desc}"
+                        func_token_count += len(encoding.encode(line))
+            func_token_count += func_end
+        return func_token_count
+
+    def _count_tokens_in_messages(self, messages, model="gpt-4o", tools=None):
+        """
+        Returns the number of tokens used by a list of messages and tools for OpenAI API calls.
+
+        Args:
+            messages (list): List of message dicts as used in OpenAI's chat API.
+            model (str): Model name (e.g., "gpt-3.5-turbo").
+            tools (list): Optional. List of tool definitions (e.g., function calls).
+
+        Returns:
+            int: Total number of tokens in the prompt.
+        """
+        try:
+            encoding = tiktoken.encoding_for_model(model)
+        except KeyError:
+            encoding = tiktoken.get_encoding("cl100k_base")  # fallback
+
+        # Define per-message and per-name token overhead based on model
+        if model.startswith("gpt-3.5") or model.startswith("gpt-4"):
+            tokens_per_message = 3
+            tokens_per_name = 1
+        else:
+            raise NotImplementedError(
+                f"num_tokens_from_messages() is not implemented for model {model}."
+            )
+
+        num_tokens = 0
+        for message in messages:
+            num_tokens += tokens_per_message
+            for key, value in message.items():
+                if value is None:
+                    continue
+                if key == "name":
+                    num_tokens += tokens_per_name
+                elif isinstance(value, str):
+                    num_tokens += len(encoding.encode(value))
+                else:
+                    # For things like 'function_call', 'tool_calls', etc.
+                    num_tokens += len(encoding.encode(json.dumps(value)))
+
+        # Include tokens from tools if present
+        if tools is not None:
+            tool_tokens = self._count_tokens_in_tools(model, tools)
+            print(f"[DEBUG] tool tokens : {tool_tokens}, prompt tokens : {num_tokens}")
+            num_tokens += tool_tokens
+
+        return num_tokens
+
+    
     def reset(self, args):
         if args["metadata"]["required"]:
             self.sys_prompt += SYSTEM_METADATA.format(system_metadata=args["metadata"]["required"], system="Salesforce instance") # add task/query-specific metadata here
@@ -94,9 +186,23 @@ class ToolCallAgent:
         self.info["observation_sizes"] = []
         done = False
         reward = 0
+        token_limit = 5000
         
         for turn_id in range(self.max_turns):
             time.sleep(3)
+            # Check total token count in the conversation so far
+            total_tokens_so_far = self._count_tokens_in_messages(self.messages, self.model, self.tools)
+            print(f"[DEBUG] Total tokens so far: {total_tokens_so_far}")
+            # If the conversation context exceeds 10k tokens, end the run early
+            if total_tokens_so_far > token_limit:
+                self.info["end_reason"] = {
+                    "source": "agent",
+                    "message": "Max tokens exceeded",
+                    "content": f"Current token count: {total_tokens_so_far} > {token_limit}"
+                }
+                done = True
+                break
+
             info = {}
             print("[DEBUG] tool call agent input :", self.messages)
             res = chat_completion_request(
@@ -111,6 +217,7 @@ class ToolCallAgent:
             message = res.choices[0].message.model_dump()
             print("[DEBUG] tool call agent output :", message)
             usage = res.usage
+            print("[DEBUG] tool call agent usage :", usage)
             
             for key in self.usage.keys():
                 if key != "cost":
@@ -123,10 +230,14 @@ class ToolCallAgent:
             
             
             if action is None:
+                if message["content"] is None:
+                    end_reason_content = "None"
+                else:
+                    end_reason_content = message["content"].strip()
                 self.info["end_reason"] = {
                     "source": "agent",
                     "message": "Invalid action",
-                    "content":  message["content"].strip()
+                    "content":  end_reason_content
                 }
                 info["end_reason"] = self.info["end_reason"]
                 # if tool_call attempted but failed
