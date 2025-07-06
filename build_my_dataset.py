@@ -72,9 +72,13 @@ for task_name, dataset in task_datasets.items():
 combined_dataset = Dataset.from_list(all_random_rows)
 print(f"\nCreated combined dataset with {len(combined_dataset)} total rows")
 
+# Shuffle the combined dataset
+combined_dataset = combined_dataset.shuffle(seed=42)
+print(f"Shuffled the combined dataset to randomize task order")
+
 # Save the combined dataset locally
-combined_dataset.save_to_disk("sub_taskset")
-print(f"Saved combined dataset to: sub_taskset/")
+combined_dataset.save_to_disk("sub_taskset_50qs")
+print(f"Saved combined dataset to: sub_taskset_50qs/")
 
 print(f"\nYou can load the combined dataset later using:")
-print("dataset = load_from_disk('sub_taskset')")
+print("dataset = load_from_disk('sub_taskset_50qs')")
